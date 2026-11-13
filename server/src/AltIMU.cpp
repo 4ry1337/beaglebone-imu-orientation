@@ -1,15 +1,32 @@
 #include "AltIMU.h"
 #include <iostream>
-#include <math.h>
+#include <cmath>
 #include <ostream>
 #include <sstream>
 
 using namespace BB;
 
+namespace {
+// Sensitivities from the datasheets for the ranges set in the CTRL registers.
+constexpr float MG_PER_LSB = 0.061f;        // LSM6DS33 at ±2 g
+constexpr float MDPS_PER_LSB = 8.75f;       // LSM6DS33 at ±245 dps
+constexpr float LSB_PER_GAUSS = 6842.0f;    // LIS3MDL at ±4 gauss
+constexpr float STANDARD_GRAVITY = 9.81f;   // m/s^2
+constexpr float DEG_TO_RAD = 3.14159265358979f / 180.0f;
+
+constexpr float ACCEL_SCALE = MG_PER_LSB * 0.001f * STANDARD_GRAVITY; // m/s^2
+// Madgwick integrates the gyro rate, so it must be in rad/s.
+constexpr float GYRO_SCALE = MDPS_PER_LSB * 0.001f * DEG_TO_RAD;
+constexpr float MAG_SCALE = 1.0f / LSB_PER_GAUSS; // gauss
+
+constexpr float BETA = 0.1f; // 2 * proportional gain
+constexpr float SAMPLE_PERIOD_S = 1.0f / AltIMU::SAMPLE_FREQ_HZ;
+} // namespace
+
 AltIMU::AltIMU(unsigned int I2CBus, unsigned int imu_address,
                unsigned int mag_address)
     : imu_sensor(I2CBus, imu_address), mag_senseor(I2CBus, mag_address) {
-  this->beta = betaDef;
+  this->beta = BETA;
   this->q0 = 1.0f;
   this->q1 = 0.0f;
   this->q2 = 0.0f;
@@ -30,17 +47,17 @@ int AltIMU::read_sensors_state() {
 }
 
 void AltIMU::calculate_quaternions() {
-  float gx = this->imu_sensor.get_gx() * G_SCALE;
-  float gy = this->imu_sensor.get_gy() * G_SCALE;
-  float gz = this->imu_sensor.get_gz() * G_SCALE;
+  float gx = this->imu_sensor.get_gx() * GYRO_SCALE;
+  float gy = this->imu_sensor.get_gy() * GYRO_SCALE;
+  float gz = this->imu_sensor.get_gz() * GYRO_SCALE;
 
-  float ax = this->imu_sensor.get_ax() * LA_SCALE;
-  float ay = this->imu_sensor.get_ay() * LA_SCALE;
-  float az = this->imu_sensor.get_az() * LA_SCALE;
+  float ax = this->imu_sensor.get_ax() * ACCEL_SCALE;
+  float ay = this->imu_sensor.get_ay() * ACCEL_SCALE;
+  float az = this->imu_sensor.get_az() * ACCEL_SCALE;
 
-  float mx = this->mag_senseor.get_mx() * M_SCALE;
-  float my = this->mag_senseor.get_my() * M_SCALE;
-  float mz = this->mag_senseor.get_mz() * M_SCALE;
+  float mx = this->mag_senseor.get_mx() * MAG_SCALE;
+  float my = this->mag_senseor.get_my() * MAG_SCALE;
+  float mz = this->mag_senseor.get_mz() * MAG_SCALE;
   MadgwickAHRSupdate(gx, gy, gz, ax, ay, az, mx, my, mz);
 }
 
@@ -163,10 +180,10 @@ void AltIMU::MadgwickAHRSupdate(float gx, float gy, float gz, float ax,
   }
 
   // Integrate rate of change of quaternion to yield quaternion
-  q0 += qDot1 * (1.0f / sampleFreq);
-  q1 += qDot2 * (1.0f / sampleFreq);
-  q2 += qDot3 * (1.0f / sampleFreq);
-  q3 += qDot4 * (1.0f / sampleFreq);
+  q0 += qDot1 * SAMPLE_PERIOD_S;
+  q1 += qDot2 * SAMPLE_PERIOD_S;
+  q2 += qDot3 * SAMPLE_PERIOD_S;
+  q3 += qDot4 * SAMPLE_PERIOD_S;
 
   // Normalise quaternion
   recipNorm = invSqrt(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
@@ -237,10 +254,10 @@ void AltIMU::MadgwickAHRSupdateIMU(float gx, float gy, float gz, float ax,
   }
 
   // Integrate rate of change of quaternion to yield quaternion
-  q0 += qDot1 * (1.0f / sampleFreq);
-  q1 += qDot2 * (1.0f / sampleFreq);
-  q2 += qDot3 * (1.0f / sampleFreq);
-  q3 += qDot4 * (1.0f / sampleFreq);
+  q0 += qDot1 * SAMPLE_PERIOD_S;
+  q1 += qDot2 * SAMPLE_PERIOD_S;
+  q2 += qDot3 * SAMPLE_PERIOD_S;
+  q3 += qDot4 * SAMPLE_PERIOD_S;
 
   // Normalise quaternion
   recipNorm = invSqrt(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
@@ -250,15 +267,7 @@ void AltIMU::MadgwickAHRSupdateIMU(float gx, float gy, float gz, float ax,
   q3 *= recipNorm;
 }
 
-float AltIMU::invSqrt(float x) {
-  float halfx = 0.5f * x;
-  float y = x;
-  long i = *(long *)&y;
-  i = 0x5f3759df - (i >> 1);
-  y = *(float *)&i;
-  y = y * (1.5f - (halfx * y * y));
-  return y;
-}
+float AltIMU::invSqrt(float x) { return 1.0f / std::sqrt(x); }
 
 void AltIMU::debug() {
   std::cout << "IMU: ";
@@ -283,7 +292,9 @@ void AltIMU::display() {
 
 std::string AltIMU::getQuaternionString() {
   std::ostringstream oss;
-  oss << this->q0 << "," << this->q1 << "," << this->q2 << "," << this->q2;
+  // The newline marks the end of a message on the TCP stream.
+  oss << this->q0 << "," << this->q1 << "," << this->q2 << "," << this->q3
+      << "\n";
   return oss.str();
 }
 

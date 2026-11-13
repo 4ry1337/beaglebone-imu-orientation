@@ -8,7 +8,12 @@ MainWindow::MainWindow(QWidget *parent)
           SLOT(getQuaternions(float, float, float, float)));
 }
 
-MainWindow::~MainWindow() { delete ui; }
+MainWindow::~MainWindow() {
+  // Destroying a QThread while it runs aborts the program.
+  mThread.run_flag = false;
+  mThread.wait();
+  delete ui;
+}
 
 void MainWindow::on_pushButton_clicked() {
   mThread.run_flag = true;

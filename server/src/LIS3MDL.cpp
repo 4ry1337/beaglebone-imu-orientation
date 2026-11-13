@@ -8,7 +8,7 @@
 namespace BB {
 
 #define LIS3MDL_ADDR 0x1E
-#define LIS3MDL_BUFFER_SIZE 0x34
+#define WHO_AM_I 0x0F
 
 #define OUTX_L_M 0x28
 #define OUTX_H_M 0x29
@@ -19,6 +19,7 @@ namespace BB {
 
 #define CTRL_REG1 0x20
 #define CTRL_REG2 0x21
+#define CTRL_REG3 0x22
 
 LIS3MDL::LIS3MDL(unsigned int I2CBus, unsigned int I2CAddress)
     : I2CDevice(I2CBus, I2CAddress) {
@@ -27,9 +28,10 @@ LIS3MDL::LIS3MDL(unsigned int I2CBus, unsigned int I2CAddress)
   this->mx = 0;
   this->my = 0;
   this->mz = 0;
-  this->registers = NULL;
   this->write_register(CTRL_REG1, 0x0C);
   this->write_register(CTRL_REG2, 0x00);
+  // Continuous conversion; the power-on default is power-down.
+  this->write_register(CTRL_REG3, 0x00);
 }
 
 short LIS3MDL::combine_registers(unsigned char msb, unsigned char lsb) {
@@ -37,12 +39,14 @@ short LIS3MDL::combine_registers(unsigned char msb, unsigned char lsb) {
 }
 
 int LIS3MDL::read_sensor_state() {
-  this->registers = this->read_registers(LIS3MDL_BUFFER_SIZE, 0x00);
+  if (this->read_registers(this->registers, LIS3MDL_BUFFER_SIZE, 0x00) != 0) {
+    return -1;
+  }
 
-  if (*(this->registers + (int)0x0f) != 0x3D) {
+  if (this->registers[WHO_AM_I] != 0x3D) {
     std::cerr << "LIS3MDL: Failure Condition - Sensor ID not Verified"
               << std::endl;
-    return 1;
+    return -1;
   }
 
   this->mx =

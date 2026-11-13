@@ -29,6 +29,8 @@ public:
   virtual int connectToServer();
   virtual int disconnectFromServer();
   virtual int send(std::string message);
+  // Returns the bytes read; an empty string means the connection is closed or
+  // failed.
   virtual std::string receive(int size);
   // virtual std::string receiveAll();
   bool isClientConnected() { return this->isConnected; }

@@ -75,6 +75,7 @@ int main() {
   writeRegister(file, LSM6DS33, 0x18, 0x38);
   writeRegister(file, LIS3MDL, 0x20, 0x0C);
   writeRegister(file, LIS3MDL, 0x21, 0x00);
+  writeRegister(file, LIS3MDL, 0x22, 0x00); // CTRL_REG3: continuous conversion
 
   while (1) {
     int16_t accelX = readRegisterPair(file, LSM6DS33, OUTX_L_A, OUTX_H_A);

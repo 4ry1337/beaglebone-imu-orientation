@@ -18,11 +18,14 @@ private:
   int socketfd, clientSocketfd;
   struct sockaddr_in serverAddress;
   struct sockaddr_in clientAddress;
-  bool clientConnected;
+
+  void closeClient();
 
 public:
   SocketServer(int portNumber);
   virtual int listen();
+  // Blocks until a client connects. Drops the current client, if any.
+  virtual int accept();
   virtual int send(std::string message);
   virtual std::string receive(int size);
 

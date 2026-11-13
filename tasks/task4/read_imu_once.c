@@ -16,6 +16,7 @@
 
 #define CTRL_REG1 0x20
 #define CTRL_REG2 0x21
+#define CTRL_REG3 0x22
 
 #define OUTX_L_G 0x22
 #define OUTX_H_G 0x23
@@ -107,6 +108,7 @@ int main() {
 
   writeRegister(file, CTRL_REG1, 0x0C);
   writeRegister(file, CTRL_REG2, 0x00);
+  writeRegister(file, CTRL_REG3, 0x00); // continuous conversion
 
   short mag_x =
       combineValues(readRegister(file, OUTX_H_M), readRegister(file, OUTX_L_M));

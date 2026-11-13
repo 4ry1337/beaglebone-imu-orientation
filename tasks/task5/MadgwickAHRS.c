@@ -21,7 +21,7 @@
 //---------------------------------------------------------------------------------------------------
 // Definitions
 
-#define sampleFreq 512.0f // sample frequency in Hz
+#define sampleFreq 50.0f // sample frequency in Hz; quaternion.c reads at this rate
 #define betaDef 0.1f      // 2 * proportional gain
 
 //---------------------------------------------------------------------------------------------------
@@ -253,18 +253,11 @@ void MadgwickAHRSupdateIMU(float gx, float gy, float gz, float ax, float ay,
 }
 
 //---------------------------------------------------------------------------------------------------
-// Fast inverse square-root
-// See: http://en.wikipedia.org/wiki/Fast_inverse_square_root
+// Inverse square-root
+// The original fast inverse square root read a float through a long pointer,
+// which is undefined behaviour and reads past the float where long is 64-bit.
 
-float invSqrt(float x) {
-  float halfx = 0.5f * x;
-  float y = x;
-  long i = *(long *)&y;
-  i = 0x5f3759df - (i >> 1);
-  y = *(float *)&i;
-  y = y * (1.5f - (halfx * y * y));
-  return y;
-}
+float invSqrt(float x) { return 1.0f / sqrtf(x); }
 
 //====================================================================================================
 // END OF CODE

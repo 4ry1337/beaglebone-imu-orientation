@@ -7,13 +7,6 @@
 
 namespace BB {
 
-#define LA_SCALE 0.061 * 9.81 * 1000.0;
-#define G_SCALE 8.75 / 1000.0;
-#define M_SCALE 1.0 / 6842.0;
-
-#define sampleFreq 512.0f // sample frequency in Hz
-#define betaDef 0.1f      // 2 * proportional gain
-
 class AltIMU {
 private:
   LSM6DS33 imu_sensor;
@@ -29,6 +22,9 @@ private:
   void calculate_quaternions();
 
 public:
+  // Sensors output at 52 Hz, so the caller must read slightly slower than that.
+  static constexpr float SAMPLE_FREQ_HZ = 50.0f;
+
   AltIMU(unsigned int I2CBus, unsigned int imu_address = 0x6B,
          unsigned int mag_address = 0x1E);
   virtual int read_sensors_state();

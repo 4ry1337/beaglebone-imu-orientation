@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
+#include <vector>
 
 #define HEX(x) std::setw(2) << std::setfill('0') << std::hex << (int)(x)
 
@@ -104,20 +105,21 @@ unsigned char I2CDevice::read_register(unsigned int registerAddress) {
  * Method to read a number of registers from a single device. This is much more
  * efficient than reading the registers individually. The from address is the
  * starting address to read from, which defaults to 0x00.
+ * @param buffer where to store the values; must hold at least number bytes
  * @param number the number of registers to read from the device
  * @param fromAddress the starting address to read from
- * @return a pointer of type unsigned char* that points to the first element in
- * the block of registers
+ * @return 1 on failure to read, 0 on success.
  */
-unsigned char *I2CDevice::read_registers(unsigned int number,
-                                         unsigned int fromAddress) {
-  this->write(fromAddress);
-  unsigned char *data = new unsigned char[number];
-  if (::read(this->file, data, number) != (int)number) {
-    perror("IC2: Failed to read in the full buffer.\n");
-    return NULL;
+int I2CDevice::read_registers(unsigned char *buffer, unsigned int number,
+                              unsigned int fromAddress) {
+  if (this->write(fromAddress) != 0) {
+    return 1;
   }
-  return data;
+  if (::read(this->file, buffer, number) != (ssize_t)number) {
+    perror("I2C: Failed to read in the full buffer.\n");
+    return 1;
+  }
+  return 0;
 }
 
 /**
@@ -131,9 +133,12 @@ unsigned char *I2CDevice::read_registers(unsigned int number,
 
 void I2CDevice::debug_registers(unsigned int number) {
   std::cout << "Dumping Registers for Debug Purposes:" << std::endl;
-  unsigned char *registers = this->read_registers(number);
+  std::vector<unsigned char> registers(number);
+  if (this->read_registers(registers.data(), number) != 0) {
+    return;
+  }
   for (int i = 0; i < (int)number; i++) {
-    std::cout << HEX(*(registers + i)) << " ";
+    std::cout << HEX(registers[i]) << " ";
     if (i % 16 == 15)
       std::cout << std::endl;
   }

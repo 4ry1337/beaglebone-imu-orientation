@@ -50,13 +50,15 @@ int SocketClient::send(std::string message) {
   return 0;
 }
 
-std::string SocketClient::receive(int size = 1024) {
-  char readBuffer[size];
-  int n = read(this->socketfd, readBuffer, sizeof(readBuffer));
+std::string SocketClient::receive(int size) {
+  std::string readBuffer(size, '\0');
+  ssize_t n = read(this->socketfd, &readBuffer[0], size);
   if (n < 0) {
     perror("Socket Client: error reading from socket");
+    n = 0;
   }
-  return std::string(readBuffer);
+  readBuffer.resize(n);
+  return readBuffer;
 }
 
 /*

@@ -1,0 +1,25 @@
+# Build output (make)
+build/
+*.o
+*.d
+
+# Build output (qmake, Qt Creator)
+build-*/
+Makefile
+Makefile.*
+.qmake.stash
+moc_*
+ui_*.h
+qrc_*.cpp
+*.pro.user
+*.pro.user.*
+
+# Compiled task binaries
+/tasks/task4/read_imu_once
+/tasks/task4/read_imu_loop
+/tasks/task5/quaternion
+
+# Editor and tool settings
+.claude/
+.vscode/
+.idea/

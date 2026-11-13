@@ -23,8 +23,8 @@ public:
   virtual int open();
   virtual int write(unsigned char value);
   virtual unsigned char read_register(unsigned int registerAddress);
-  virtual unsigned char *read_registers(unsigned int number,
-                                        unsigned int fromAddress = 0);
+  virtual int read_registers(unsigned char *buffer, unsigned int number,
+                             unsigned int fromAddress = 0);
   virtual int write_register(unsigned int registerAddress, unsigned char value);
   virtual void debug_registers(unsigned int number = 0xff);
   virtual void close();

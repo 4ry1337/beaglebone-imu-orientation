@@ -6,13 +6,15 @@
 #include <QThread>
 #include <QVector3D>
 #include <QtMath>
+#include <atomic>
 
 class MyThread : public QThread {
   Q_OBJECT
 public:
   MyThread(QObject *parent = 0);
   ~MyThread();
-  bool run_flag;
+  // Set by the GUI thread, read by the socket thread.
+  std::atomic<bool> run_flag{false};
 
 signals:
   void setQuats(const float, const float, const float, const float);

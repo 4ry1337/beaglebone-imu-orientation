@@ -8,7 +8,6 @@
 namespace BB {
 
 #define LSM6DS33_ADDR 0x6B
-#define LSM6DS33_BUFFER_SIZE 0x70
 #define WHO_AM_I 0x0F
 #define CTRL1_XL 0x10
 #define CTRL2_G 0x11
@@ -40,7 +39,6 @@ LSM6DS33::LSM6DS33(unsigned int I2CBus, unsigned int I2CAddress)
   this->gx = 0;
   this->gy = 0;
   this->gz = 0;
-  this->registers = NULL;
   this->write_register(CTRL1_XL, 0x30);
   this->write_register(CTRL2_G, 0x30);
 }
@@ -50,9 +48,11 @@ short LSM6DS33::combine_registers(unsigned char msb, unsigned char lsb) {
 }
 
 int LSM6DS33::read_sensor_state() {
-  this->registers = this->read_registers(LSM6DS33_BUFFER_SIZE, 0x00);
+  if (this->read_registers(this->registers, LSM6DS33_BUFFER_SIZE, 0x00) != 0) {
+    return -1;
+  }
 
-  if (*(this->registers + (int)0x0f) != 0x69) {
+  if (this->registers[WHO_AM_I] != 0x69) {
     std::cerr << "LSM6DS33: Failure Condition - Sensor ID not Verified"
               << std::endl;
     return -1;

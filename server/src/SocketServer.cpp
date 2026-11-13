@@ -35,13 +35,19 @@ SocketServer::SocketServer(int portNumber) {
   this->socketfd = -1;
   this->clientSocketfd = -1;
   this->portNumber = portNumber;
-  this->clientConnected = false;
 }
 
 int SocketServer::listen() {
   this->socketfd = socket(AF_INET, SOCK_STREAM, 0);
   if (this->socketfd < 0) {
     perror("Socket Server: error opening socket.\n");
+    return 1;
+  }
+  // Lets a restarted server bind while the old socket is still in TIME_WAIT.
+  int reuse = 1;
+  if (setsockopt(this->socketfd, SOL_SOCKET, SO_REUSEADDR, &reuse,
+                 sizeof(reuse)) < 0) {
+    perror("Socket Server: error setting SO_REUSEADDR.\n");
     return 1;
   }
   bzero((char *)&serverAddress, sizeof(serverAddress));
@@ -53,9 +59,17 @@ int SocketServer::listen() {
     perror("Socket Server: error on binding the socket.\n");
     return 1;
   }
-  ::listen(this->socketfd, 5);
+  if (::listen(this->socketfd, 5) < 0) {
+    perror("Socket Server: error listening on the socket.\n");
+    return 1;
+  }
+  return 0;
+}
+
+int SocketServer::accept() {
+  this->closeClient();
   socklen_t clientLength = sizeof(this->clientAddress);
-  this->clientSocketfd = accept(
+  this->clientSocketfd = ::accept(
       this->socketfd, (struct sockaddr *)&this->clientAddress, &clientLength);
   if (this->clientSocketfd < 0) {
     perror("Socket Server: Failed to bind the client socket properly.\n");
@@ -66,27 +80,45 @@ int SocketServer::listen() {
 
 int SocketServer::send(std::string message) {
   const char *writeBuffer = message.data();
-  int length = message.length();
-  int n = write(this->clientSocketfd, writeBuffer, length);
-  if (n < 0) {
-    perror("Socket Server: error writing to server socket.");
-    return 1;
+  size_t remaining = message.length();
+  while (remaining > 0) {
+    // MSG_NOSIGNAL: a closed client must return an error, not kill the process
+    // with SIGPIPE.
+    ssize_t n = ::send(this->clientSocketfd, writeBuffer, remaining,
+                       MSG_NOSIGNAL);
+    if (n < 0) {
+      perror("Socket Server: error writing to server socket.");
+      return 1;
+    }
+    writeBuffer += n;
+    remaining -= n;
   }
   return 0;
 }
 
-string SocketServer::receive(int size = 1024) {
-  char readBuffer[size];
-  int n = read(this->clientSocketfd, readBuffer, sizeof(readBuffer));
+string SocketServer::receive(int size) {
+  string readBuffer(size, '\0');
+  ssize_t n = read(this->clientSocketfd, &readBuffer[0], size);
   if (n < 0) {
     perror("Socket Server: error reading from server socket.");
+    n = 0;
   }
-  return string(readBuffer);
+  readBuffer.resize(n);
+  return readBuffer;
+}
+
+void SocketServer::closeClient() {
+  if (this->clientSocketfd >= 0) {
+    close(this->clientSocketfd);
+    this->clientSocketfd = -1;
+  }
 }
 
 SocketServer::~SocketServer() {
-  close(this->socketfd);
-  close(this->clientSocketfd);
+  this->closeClient();
+  if (this->socketfd >= 0) {
+    close(this->socketfd);
+  }
 }
 
 } // namespace BB

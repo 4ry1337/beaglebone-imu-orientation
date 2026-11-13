@@ -3,12 +3,14 @@
 
 #include "I2CDevice.h"
 
+#define LSM6DS33_BUFFER_SIZE 0x70
+
 namespace BB {
 
 class LSM6DS33 : protected I2CDevice {
 private:
   unsigned int I2CBus, I2CAddress;
-  unsigned char *registers;
+  unsigned char registers[LSM6DS33_BUFFER_SIZE];
 
   short ax, ay, az;
   short gx, gy, gz;
