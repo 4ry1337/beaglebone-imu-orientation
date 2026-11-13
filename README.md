@@ -1,4 +1,4 @@
-# Embedded IMU
+# BeagleBone IMU Orientation
 
 Reads an AltIMU-10 v5 on a BeagleBone Black and shows its 3D orientation live in a Qt app.
 
@@ -82,8 +82,8 @@ On the PC:
 1. Clone the repository on the PC:
 
    ```sh
-   git clone https://github.com/4ry1337/embedded-imu.git
-   cd embedded-imu
+   git clone https://github.com/4ry1337/beaglebone-imu-orientation.git
+   cd beaglebone-imu-orientation
    ```
 
 2. Plug in the BBB. Over USB, it is at `192.168.7.2` and the PC is at
@@ -258,7 +258,8 @@ These values are constants in the code. Change them there:
   `1` on error. A caller cannot tell that apart from a real reading of 1.
 - `tasks/task4/read_imu_loop.c` writes the register address from an `int`.
   This works only on little-endian CPUs, such as the BBB's.
-- The report links to `task5/quaternions.c`. That file is now
+- The report links to `embedded-imu/blob/main/task5/quaternions.c`. The repo
+  is now `beaglebone-imu-orientation`, and that file is
   [`tasks/task5/quaternion.c`](tasks/task5/quaternion.c).
 - The demo video linked in the report is not public.
 
@@ -284,7 +285,7 @@ Rakhat Yskak: [@4ry1337](https://github.com/4ry1337), yskak.rakhat@gmail.com
 
 ## Contributing
 
-Ask questions and report bugs in [GitHub Issues](https://github.com/4ry1337/embedded-imu/issues).
+Ask questions and report bugs in [GitHub Issues](https://github.com/4ry1337/beaglebone-imu-orientation/issues).
 Pull requests are welcome. For a big change, open an issue first so we can
 agree on the plan.
 
